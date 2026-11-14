@@ -37,11 +37,16 @@ struct ContentView: View {
     // Challenge C4: button shrinks with every tap
     @State private var buttonScale = 1.0
 
+    // Used to switch to a side-by-side layout in landscape
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+
     var body: some View {
         VStack {
-            Text("Tap Frenzy")
-                .font(.headline)
-                .foregroundStyle(.secondary)
+            if verticalSizeClass != .compact {
+                Text("Tap Frenzy")
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+            }
 
             Spacer()
 
@@ -66,7 +71,12 @@ struct ContentView: View {
     // MARK: - Playing screen
 
     private var gameView: some View {
-        VStack(spacing: 48) {
+        // Stack vertically in portrait, side by side in landscape
+        let layout = verticalSizeClass == .compact
+            ? AnyLayout(HStackLayout(spacing: 48))
+            : AnyLayout(VStackLayout(spacing: 48))
+
+        return layout {
             scoreBoard
             tapButton
         }
