@@ -32,6 +32,9 @@ struct ContentView: View {
     @State private var combo = 1
     @State private var lastTap = Date.distantPast
 
+    // Challenge C4: button shrinks with every tap
+    @State private var buttonScale = 1.0
+
     var body: some View {
         VStack {
             Text("Tap Frenzy")
@@ -110,6 +113,7 @@ struct ContentView: View {
                 .contentShape(Circle())
         }
         .buttonStyle(PressableStyle())
+        .scaleEffect(buttonScale)
     }
 
     // MARK: - Game-over screen
@@ -172,6 +176,9 @@ struct ContentView: View {
         withAnimation(.spring(response: 0.25, dampingFraction: 0.6)) {
             combo = isFastTap ? min(combo + 1, 3) : 1
             score += combo
+
+            // C4: shrink the button a little, but never below 60%
+            buttonScale = max(0.6, buttonScale - 0.02)
         }
     }
 
@@ -210,6 +217,7 @@ struct ContentView: View {
             combo = 1
             lastTap = .distantPast
             timeRemaining = roundLength
+            buttonScale = 1.0
             isNewBest = false
             phase = .idle
         }
