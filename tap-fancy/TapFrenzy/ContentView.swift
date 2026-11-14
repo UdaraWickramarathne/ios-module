@@ -8,6 +8,8 @@ enum GamePhase {
 // A small, calm colour palette
 enum Palette {
     static let green = Color(red: 0.36, green: 0.72, blue: 0.47)
+    static let amber = Color(red: 0.96, green: 0.69, blue: 0.30)
+    static let red   = Color(red: 0.91, green: 0.39, blue: 0.37)
 }
 
 // How long one round lasts, in seconds
@@ -91,7 +93,7 @@ struct ContentView: View {
                 }
 
             ProgressView(value: Double(timeRemaining), total: Double(roundLength))
-                .tint(Palette.green)
+                .tint(timerColor)
                 .frame(width: 220)
                 .animation(.linear(duration: 1), value: timeRemaining)
 
@@ -118,6 +120,13 @@ struct ContentView: View {
         }
         .buttonStyle(PressableStyle())
         .scaleEffect(buttonScale)
+    }
+
+    // Timer colour shift: green → amber → red
+    private var timerColor: Color {
+        if timeRemaining > 6 { return Palette.green }
+        if timeRemaining > 3 { return Palette.amber }
+        return Palette.red
     }
 
     // MARK: - Game-over screen
