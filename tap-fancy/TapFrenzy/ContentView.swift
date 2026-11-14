@@ -5,9 +5,16 @@ enum Palette {
     static let green = Color(red: 0.36, green: 0.72, blue: 0.47)
 }
 
+// How long one round lasts, in seconds
+private let roundLength = 10
+
 struct ContentView: View {
     // Step 3: score
     @State private var score = 0
+
+    // Step 4: countdown timer that ticks every second
+    @State private var timeRemaining = roundLength
+    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         VStack {
@@ -22,6 +29,9 @@ struct ContentView: View {
             Spacer()
         }
         .padding()
+        .onReceive(timer) { _ in
+            tick()
+        }
     }
 
     // MARK: - Playing screen
@@ -43,8 +53,13 @@ struct ContentView: View {
             Text("\(score)")
                 .font(.system(size: 80, weight: .heavy, design: .rounded))
 
-            Text("tap to start")
-                .font(.subheadline)
+            ProgressView(value: Double(timeRemaining), total: Double(roundLength))
+                .tint(Palette.green)
+                .frame(width: 220)
+                .animation(.linear(duration: 1), value: timeRemaining)
+
+            Text("\(timeRemaining)s left")
+                .font(.subheadline.monospacedDigit())
                 .foregroundStyle(.secondary)
         }
     }
@@ -69,6 +84,12 @@ struct ContentView: View {
 
     private func tap() {
         score += 1
+    }
+
+    private func tick() {
+        if timeRemaining > 0 {
+            timeRemaining -= 1
+        }
     }
 }
 
