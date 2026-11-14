@@ -28,6 +28,10 @@ struct ContentView: View {
     @AppStorage("highScore") private var highScore = 0
     @State private var isNewBest = false
 
+    // Challenge C1: combo for fast taps
+    @State private var combo = 1
+    @State private var lastTap = Date.distantPast
+
     var body: some View {
         VStack {
             Text("Tap Frenzy")
@@ -71,6 +75,15 @@ struct ContentView: View {
 
             Text("\(score)")
                 .font(.system(size: 80, weight: .heavy, design: .rounded))
+                .overlay(alignment: .topTrailing) {
+                    if combo > 1 {
+                        Text("x\(combo)!")
+                            .font(.headline.weight(.heavy))
+                            .foregroundStyle(Palette.green)
+                            .offset(x: 44, y: 8)
+                            .transition(.scale.combined(with: .opacity))
+                    }
+                }
 
             ProgressView(value: Double(timeRemaining), total: Double(roundLength))
                 .tint(Palette.green)
@@ -151,7 +164,15 @@ struct ContentView: View {
             phase = .playing
         }
 
-        score += 1
+        // C1: two taps within 0.3 seconds build a combo (up to x3)
+        let now = Date()
+        let isFastTap = now.timeIntervalSince(lastTap) < 0.3
+        lastTap = now
+
+        withAnimation(.spring(response: 0.25, dampingFraction: 0.6)) {
+            combo = isFastTap ? min(combo + 1, 3) : 1
+            score += combo
+        }
     }
 
     private func tick() {
@@ -159,6 +180,11 @@ struct ContentView: View {
 
         if timeRemaining > 0 {
             timeRemaining -= 1
+        }
+
+        // Combo badge fades away when the player slows down
+        if Date().timeIntervalSince(lastTap) > 0.3 {
+            withAnimation { combo = 1 }
         }
 
         // Time's up: playing → over
@@ -181,6 +207,8 @@ struct ContentView: View {
     private func resetGame() {
         withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
             score = 0
+            combo = 1
+            lastTap = .distantPast
             timeRemaining = roundLength
             isNewBest = false
             phase = .idle
