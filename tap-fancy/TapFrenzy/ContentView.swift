@@ -6,6 +6,9 @@ enum Palette {
 }
 
 struct ContentView: View {
+    // Step 3: score
+    @State private var score = 0
+
     var body: some View {
         VStack {
             Text("Tap Frenzy")
@@ -37,7 +40,7 @@ struct ContentView: View {
                 .tracking(2)
                 .foregroundStyle(.secondary)
 
-            Text("0")
+            Text("\(score)")
                 .font(.system(size: 80, weight: .heavy, design: .rounded))
 
             Text("tap to start")
@@ -47,7 +50,7 @@ struct ContentView: View {
     }
 
     private var tapButton: some View {
-        Button(action: {}) {
+        Button(action: tap) {
             Text("TAP")
                 .font(.system(size: 44, weight: .heavy, design: .rounded))
                 .foregroundStyle(.white)
@@ -60,6 +63,12 @@ struct ContentView: View {
                 .contentShape(Circle())
         }
         .buttonStyle(PressableStyle())
+    }
+
+    // MARK: - Game logic
+
+    private func tap() {
+        score += 1
     }
 }
 
