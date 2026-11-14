@@ -27,6 +27,7 @@ struct ContentView: View {
     @State private var lastTap = Date.distantPast
 
     @State private var buttonScale = 1.0
+    @State private var buttonOffset = CGSize.zero
 
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
@@ -117,6 +118,7 @@ struct ContentView: View {
         }
         .buttonStyle(PressableStyle())
         .scaleEffect(buttonScale)
+        .offset(buttonOffset)
     }
 
     private var timerColor: Color {
@@ -187,6 +189,7 @@ struct ContentView: View {
 
         if timeRemaining > 0 {
             timeRemaining -= 1
+            moveButton()
         }
 
         if Date().timeIntervalSince(lastTap) > 0.3 {
@@ -195,6 +198,16 @@ struct ContentView: View {
 
         if timeRemaining == 0 {
             endGame()
+        }
+    }
+
+    private func moveButton() {
+        let isLandscape = verticalSizeClass == .compact
+        let x = CGFloat.random(in: isLandscape ? 0...110 : -70...70)
+        let y = CGFloat.random(in: isLandscape ? -60...60 : -30...90)
+
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+            buttonOffset = CGSize(width: x, height: y)
         }
     }
 
@@ -216,6 +229,7 @@ struct ContentView: View {
             lastTap = .distantPast
             timeRemaining = roundLength
             buttonScale = 1.0
+            buttonOffset = .zero
             isNewBest = false
             phase = .idle
         }
