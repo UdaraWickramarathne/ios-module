@@ -24,6 +24,10 @@ struct ContentView: View {
     // Step 5: current game phase
     @State private var phase: GamePhase = .idle
 
+    // Step 6: best score, saved between app launches
+    @AppStorage("highScore") private var highScore = 0
+    @State private var isNewBest = false
+
     var body: some View {
         VStack {
             Text("Tap Frenzy")
@@ -111,6 +115,18 @@ struct ContentView: View {
                 .font(.system(size: 64, weight: .heavy, design: .rounded))
                 .foregroundStyle(Palette.green)
 
+            if isNewBest {
+                Text("New best!")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Palette.green)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Palette.green.opacity(0.15), in: Capsule())
+            }
+
+            Text("Best: \(highScore)")
+                .foregroundStyle(.secondary)
+
             Button(action: resetGame) {
                 Text("Play Again")
                     .font(.headline)
@@ -152,6 +168,11 @@ struct ContentView: View {
     }
 
     private func endGame() {
+        if score > highScore {
+            highScore = score
+            isNewBest = true
+        }
+
         withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
             phase = .over
         }
@@ -161,6 +182,7 @@ struct ContentView: View {
         withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
             score = 0
             timeRemaining = roundLength
+            isNewBest = false
             phase = .idle
         }
     }
