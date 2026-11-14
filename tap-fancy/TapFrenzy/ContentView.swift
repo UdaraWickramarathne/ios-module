@@ -58,6 +58,7 @@ struct ContentView: View {
         .onReceive(timer) { _ in
             tick()
         }
+        .sensoryFeedback(.impact(weight: .light), trigger: score)
     }
 
     // MARK: - Playing screen
@@ -78,6 +79,7 @@ struct ContentView: View {
 
             Text("\(score)")
                 .font(.system(size: 80, weight: .heavy, design: .rounded))
+                .contentTransition(.numericText(value: Double(score)))
                 .overlay(alignment: .topTrailing) {
                     if combo > 1 {
                         Text("x\(combo)!")
@@ -96,6 +98,8 @@ struct ContentView: View {
             Text(phase == .idle ? "tap to start" : "\(timeRemaining)s left")
                 .font(.subheadline.monospacedDigit())
                 .foregroundStyle(.secondary)
+                .contentTransition(.numericText(countsDown: true))
+                .animation(.snappy, value: timeRemaining)
         }
     }
 
