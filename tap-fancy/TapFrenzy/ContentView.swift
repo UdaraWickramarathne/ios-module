@@ -1,5 +1,10 @@
 import SwiftUI
 
+// Step 5: the three phases of a game
+enum GamePhase {
+    case idle, playing, over
+}
+
 // A small, calm colour palette
 enum Palette {
     static let green = Color(red: 0.36, green: 0.72, blue: 0.47)
@@ -16,6 +21,9 @@ struct ContentView: View {
     @State private var timeRemaining = roundLength
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
+    // Step 5: current game phase
+    @State private var phase: GamePhase = .idle
+
     var body: some View {
         VStack {
             Text("Tap Frenzy")
@@ -24,7 +32,14 @@ struct ContentView: View {
 
             Spacer()
 
-            gameView
+            switch phase {
+            case .idle, .playing:
+                gameView
+                    .transition(.opacity)
+            case .over:
+                gameOverView
+                    .transition(.scale(scale: 0.9).combined(with: .opacity))
+            }
 
             Spacer()
         }
@@ -58,7 +73,7 @@ struct ContentView: View {
                 .frame(width: 220)
                 .animation(.linear(duration: 1), value: timeRemaining)
 
-            Text("\(timeRemaining)s left")
+            Text(phase == .idle ? "tap to start" : "\(timeRemaining)s left")
                 .font(.subheadline.monospacedDigit())
                 .foregroundStyle(.secondary)
         }
@@ -80,15 +95,73 @@ struct ContentView: View {
         .buttonStyle(PressableStyle())
     }
 
+    // MARK: - Game-over screen
+
+    private var gameOverView: some View {
+        VStack(spacing: 14) {
+            Text("Time's up")
+                .font(.system(size: 44, weight: .heavy, design: .rounded))
+
+            Text("YOUR SCORE")
+                .font(.caption.weight(.semibold))
+                .tracking(2)
+                .foregroundStyle(.secondary)
+
+            Text("\(score)")
+                .font(.system(size: 64, weight: .heavy, design: .rounded))
+                .foregroundStyle(Palette.green)
+
+            Button(action: resetGame) {
+                Text("Play Again")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 32)
+                    .padding(.vertical, 14)
+                    .background(Palette.green, in: Capsule())
+            }
+            .buttonStyle(PressableStyle())
+            .padding(.top, 8)
+        }
+    }
+
     // MARK: - Game logic
 
     private func tap() {
+        // Ignore stray taps once the round is over
+        guard phase != .over else { return }
+
+        // First tap starts the round: idle → playing
+        if phase == .idle {
+            phase = .playing
+        }
+
         score += 1
     }
 
     private func tick() {
+        guard phase == .playing else { return }
+
         if timeRemaining > 0 {
             timeRemaining -= 1
+        }
+
+        // Time's up: playing → over
+        if timeRemaining == 0 {
+            endGame()
+        }
+    }
+
+    private func endGame() {
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            phase = .over
+        }
+    }
+
+    private func resetGame() {
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            score = 0
+            timeRemaining = roundLength
+            phase = .idle
         }
     }
 }
