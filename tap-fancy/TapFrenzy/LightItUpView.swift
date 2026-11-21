@@ -5,15 +5,55 @@ struct Card: Identifiable {
     var isLit = false
 }
 
+enum Level: Int {
+    case one = 1, two, three, four
+
+    static func forTime(_ elapsed: Int) -> Level {
+        if elapsed < 15 { return .one }
+        if elapsed < 30 { return .two }
+        if elapsed < 45 { return .three }
+        return .four
+    }
+
+    var cardCount: Int {
+        switch self {
+        case .one: return 3
+        case .two: return 4
+        case .three: return 6
+        case .four: return 9
+        }
+    }
+
+    var columns: Int {
+        self == .two ? 2 : 3
+    }
+
+    var litWindow: Double {
+        switch self {
+        case .one: return 1.5
+        case .two: return 1.2
+        case .three: return 1.0
+        case .four: return 0.8
+        }
+    }
+
+    var litCount: Int {
+        self == .four ? 2 : 1
+    }
+
+    func makeCards() -> [Card] {
+        (0..<cardCount).map { Card(id: $0) }
+    }
+}
+
 private let roundLength = 60
-private let cardCount = 3
-private let litWindow = 1.5
 
 struct LightItUpView: View {
     @State private var phase: GamePhase = .idle
     @State private var score = 0
     @State private var timeRemaining = roundLength
-    @State private var cards = (0..<cardCount).map { Card(id: $0) }
+    @State private var level: Level = .one
+    @State private var cards = Level.one.makeCards()
     @State private var flashes: [Int: Color] = [:]
     @State private var roundID = 0
 
@@ -64,7 +104,10 @@ struct LightItUpView: View {
 
     private var infoPanel: some View {
         VStack(spacing: 16) {
-            stat("SCORE", value: score)
+            HStack(alignment: .top, spacing: 32) {
+                stat("SCORE", value: score)
+                stat("LEVEL", value: level.rawValue)
+            }
 
             ProgressView(value: Double(timeRemaining), total: Double(roundLength))
                 .tint(Palette.green)
@@ -96,7 +139,7 @@ struct LightItUpView: View {
     }
 
     private var grid: some View {
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 14), count: 3)
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 14), count: level.columns)
 
         return LazyVGrid(columns: columns, spacing: 14) {
             ForEach(cards) { card in
@@ -132,6 +175,9 @@ struct LightItUpView: View {
             Text("\(score)")
                 .font(.system(size: 64, weight: .heavy, design: .rounded))
                 .foregroundStyle(Palette.green)
+
+            Text("Reached level \(level.rawValue)")
+                .foregroundStyle(.secondary)
 
             Button(action: resetGame) {
                 Text("Play Again")
@@ -185,15 +231,15 @@ struct LightItUpView: View {
 
     private func lightCards() {
         let round = roundID
-        let litID = cards.map { $0.id }.randomElement()
+        let litIDs = cards.map { $0.id }.shuffled().prefix(level.litCount)
 
         withAnimation {
-            for index in cards.indices where cards[index].id == litID {
+            for index in cards.indices where litIDs.contains(cards[index].id) {
                 cards[index].isLit = true
             }
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + litWindow) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + level.litWindow) {
             guard round == roundID, phase == .playing else { return }
             endLitWindow()
         }
@@ -239,8 +285,20 @@ struct LightItUpView: View {
             timeRemaining -= 1
         }
 
+        let newLevel = Level.forTime(roundLength - timeRemaining)
+        if newLevel != level {
+            levelUp(to: newLevel)
+        }
+
         if timeRemaining == 0 {
             endRound()
+        }
+    }
+
+    private func levelUp(to newLevel: Level) {
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            level = newLevel
+            cards = newLevel.makeCards()
         }
     }
 
@@ -260,7 +318,8 @@ struct LightItUpView: View {
         withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
             score = 0
             timeRemaining = roundLength
-            cards = (0..<cardCount).map { Card(id: $0) }
+            level = .one
+            cards = Level.one.makeCards()
             flashes = [:]
             phase = .idle
         }
