@@ -182,6 +182,8 @@ struct ContentView: View {
             score += combo
             buttonScale = max(0.6, buttonScale - 0.02)
         }
+
+        moveButton()
     }
 
     private func tick() {
@@ -189,7 +191,6 @@ struct ContentView: View {
 
         if timeRemaining > 0 {
             timeRemaining -= 1
-            moveButton()
         }
 
         if Date().timeIntervalSince(lastTap) > 0.3 {
@@ -206,7 +207,7 @@ struct ContentView: View {
         let x = CGFloat.random(in: isLandscape ? 0...110 : -70...70)
         let y = CGFloat.random(in: isLandscape ? -60...60 : -30...90)
 
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+        withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
             buttonOffset = CGSize(width: x, height: y)
         }
     }
