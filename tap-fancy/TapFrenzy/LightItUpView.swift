@@ -57,6 +57,9 @@ struct LightItUpView: View {
     @State private var flashes: [Int: Color] = [:]
     @State private var roundID = 0
 
+    @AppStorage("lightItUpHighScore") private var highScore = 0
+    @State private var isNewBest = false
+
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -177,6 +180,18 @@ struct LightItUpView: View {
                 .foregroundStyle(Palette.green)
 
             Text("Reached level \(level.rawValue)")
+                .foregroundStyle(.secondary)
+
+            if isNewBest {
+                Text("New best!")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Palette.green)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Palette.green.opacity(0.15), in: Capsule())
+            }
+
+            Text("Best: \(highScore)")
                 .foregroundStyle(.secondary)
 
             Button(action: resetGame) {
@@ -307,6 +322,11 @@ struct LightItUpView: View {
 
         roundID += 1
 
+        if score > highScore {
+            highScore = score
+            isNewBest = true
+        }
+
         withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
             phase = .over
         }
@@ -321,6 +341,7 @@ struct LightItUpView: View {
             level = .one
             cards = Level.one.makeCards()
             flashes = [:]
+            isNewBest = false
             phase = .idle
         }
     }
