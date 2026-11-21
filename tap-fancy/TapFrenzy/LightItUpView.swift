@@ -41,20 +41,32 @@ enum Level: Int {
         self == .four ? 2 : 1
     }
 
+    var color: Color {
+        switch self {
+        case .one: return Palette.green
+        case .two: return Palette.blue
+        case .three: return Palette.purple
+        case .four: return Palette.amber
+        }
+    }
+
     func makeCards() -> [Card] {
         (0..<cardCount).map { Card(id: $0) }
     }
 }
 
 private let roundLength = 60
+private let startingLives = 3
 
 struct LightItUpView: View {
     @State private var phase: GamePhase = .idle
     @State private var score = 0
+    @State private var lives = startingLives
     @State private var timeRemaining = roundLength
     @State private var level: Level = .one
     @State private var cards = Level.one.makeCards()
     @State private var flashes: [Int: Color] = [:]
+    @State private var showLevelUp = false
     @State private var roundID = 0
 
     @AppStorage("lightItUpHighScore") private var highScore = 0
@@ -86,12 +98,17 @@ struct LightItUpView: View {
             Spacer()
         }
         .padding()
+        .overlay {
+            levelUpBanner
+        }
         .onReceive(timer) { _ in
             tick()
         }
         .onDisappear {
             roundID += 1
         }
+        .sensoryFeedback(.impact(weight: .light), trigger: score) { old, new in new > old }
+        .sensoryFeedback(.error, trigger: lives) { old, new in new < old }
     }
 
     private var gameView: some View {
@@ -110,10 +127,21 @@ struct LightItUpView: View {
             HStack(alignment: .top, spacing: 32) {
                 stat("SCORE", value: score)
                 stat("LEVEL", value: level.rawValue)
+
+                VStack(spacing: 10) {
+                    label("LIVES")
+                    HStack(spacing: 4) {
+                        ForEach(0..<startingLives, id: \.self) { index in
+                            Image(systemName: index < lives ? "heart.fill" : "heart")
+                        }
+                    }
+                    .font(.system(size: 20))
+                    .foregroundStyle(Palette.red)
+                }
             }
 
             ProgressView(value: Double(timeRemaining), total: Double(roundLength))
-                .tint(Palette.green)
+                .tint(level.color)
                 .frame(width: 240)
                 .animation(.linear(duration: 1), value: timeRemaining)
 
@@ -152,7 +180,7 @@ struct LightItUpView: View {
                     RoundedRectangle(cornerRadius: 22)
                         .fill(cardColor(card))
                         .aspectRatio(1, contentMode: .fit)
-                        .shadow(color: card.isLit ? Palette.green.opacity(0.5) : .clear, radius: 16)
+                        .shadow(color: card.isLit ? level.color.opacity(0.5) : .clear, radius: 16)
                 }
                 .buttonStyle(PressableStyle())
                 .scaleEffect(card.isLit ? 1.08 : 1)
@@ -164,20 +192,35 @@ struct LightItUpView: View {
 
     private func cardColor(_ card: Card) -> Color {
         if let flash = flashes[card.id] { return flash }
-        if card.isLit { return Palette.green }
+        if card.isLit { return level.color }
         return Color.secondary.opacity(0.15)
+    }
+
+    @ViewBuilder
+    private var levelUpBanner: some View {
+        if showLevelUp {
+            Text("Level \(level.rawValue)!")
+                .font(.system(size: 40, weight: .heavy, design: .rounded))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 28)
+                .padding(.vertical, 14)
+                .background(level.color, in: Capsule())
+                .shadow(color: level.color.opacity(0.4), radius: 20, y: 8)
+                .transition(.scale(scale: 0.6).combined(with: .opacity))
+                .allowsHitTesting(false)
+        }
     }
 
     private var gameOverView: some View {
         VStack(spacing: 14) {
-            Text("Round over")
+            Text(lives == 0 ? "Out of lives" : "Round over")
                 .font(.system(size: 44, weight: .heavy, design: .rounded))
 
             label("FINAL SCORE")
 
             Text("\(score)")
                 .font(.system(size: 64, weight: .heavy, design: .rounded))
-                .foregroundStyle(Palette.green)
+                .foregroundStyle(level.color)
 
             Text("Reached level \(level.rawValue)")
                 .foregroundStyle(.secondary)
@@ -224,7 +267,7 @@ struct LightItUpView: View {
             flash(card.id, color: Palette.green)
         } else {
             flash(card.id, color: Palette.red)
-            penalty()
+            loseLife()
         }
     }
 
@@ -270,7 +313,7 @@ struct LightItUpView: View {
         }
 
         for _ in 0..<missed {
-            penalty()
+            loseLife()
         }
 
         scheduleNextLight(after: Double.random(in: 0.3...0.7))
@@ -287,9 +330,15 @@ struct LightItUpView: View {
         }
     }
 
-    private func penalty() {
+    private func loseLife() {
+        guard phase == .playing else { return }
+
         withAnimation {
-            score = max(0, score - 1)
+            lives -= 1
+        }
+
+        if lives == 0 {
+            endRound()
         }
     }
 
@@ -314,6 +363,13 @@ struct LightItUpView: View {
         withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
             level = newLevel
             cards = newLevel.makeCards()
+            showLevelUp = true
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            withAnimation {
+                showLevelUp = false
+            }
         }
     }
 
@@ -337,6 +393,7 @@ struct LightItUpView: View {
 
         withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
             score = 0
+            lives = startingLives
             timeRemaining = roundLength
             level = .one
             cards = Level.one.makeCards()
